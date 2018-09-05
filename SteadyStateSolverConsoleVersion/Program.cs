@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
@@ -16,6 +17,7 @@ namespace SteadyStateConsoleVersion
             };
 
             MarkovChain m = new MarkovChain(mchain);
+            m.SteadyStateValues();
             Console.WriteLine(m);
 
             Console.ReadLine();
@@ -25,41 +27,49 @@ namespace SteadyStateConsoleVersion
     public class MarkovChain
     {
         private decimal[,] Matrix;
-        private SteadyStateEquation[] steadyStateEquations;
-        private decimal[] solvedSteadyStateEquations;
-        private int len;
+        private SteadyStateEquation[] SteadyStateEquations;
+        private int Len;
 
         public MarkovChain(decimal[,] matrix)
         {
             Matrix = matrix;
-            len = matrix.GetLength(0);
+            Len = matrix.GetLength(0);
 
-            steadyStateEquations = new SteadyStateEquation[len];
-            for (int i = 0; i < len; i++)
+            SteadyStateEquations = new SteadyStateEquation[Len];
+            for (int i = 0; i < Len; i++)
             {
-                decimal[] row = Enumerable.Range(0, len)
+                decimal[] row = Enumerable.Range(0, Len)
                     .Select(x => matrix[i, x])
                     .ToArray();
 
-                steadyStateEquations[i] = new SteadyStateEquation(i, row);
+                SteadyStateEquations[i] = new SteadyStateEquation(i, row);
             }
         }
 
-        public SteadyStateValue[] SteadyStateValues()
+        public SteadyStateValue[] SteadyStateValues() //solve
         {
+            foreach (SteadyStateEquation steadyStateEquation in SteadyStateEquations)
+                steadyStateEquation.Simplify();
+
+            for (int i = 1; i < SteadyStateEquations.Length; i++)
+                for (int j = 1; j < SteadyStateEquations.Length; j++)
+                    if (i != j)
+                    {
+                        SteadyStateEquations[j].SubstituteEquation(SteadyStateEquations[i]); //j takes in i
+                        SteadyStateEquations[j].Consolidate();
+                        SteadyStateEquations[j].Simplify();
+                    }
+
             return null;
         }
-
 
         public override string ToString()
         {
             StringBuilder markovChainString = new StringBuilder();
 
-
-
-            for (int i = 0; i < len; i++)
+            for (int i = 0; i < Len; i++)
             {
-                for (int j = 0; j < len; j++)
+                for (int j = 0; j < Len; j++)
                     markovChainString.Append($"{Matrix[i, j]}  ");
 
                 markovChainString.AppendLine();
@@ -72,15 +82,68 @@ namespace SteadyStateConsoleVersion
     public class SteadyStateEquation
     {
         public int Equivalent { get; set; }
-        public SteadyStateValue[] SteadyStateValues { get; set; }
+        public List<SteadyStateValue> SteadyStateValues { get; set; }
 
         public SteadyStateEquation(int equivalent, decimal[] values)
         {
             Equivalent = equivalent;
 
-            SteadyStateValues = new SteadyStateValue[values.Length];
+            SteadyStateValues = new List<SteadyStateValue>();
+
             for (int i = 0; i < values.Length; i++)
-                SteadyStateValues[i] = new SteadyStateValue(i, values[i]);
+                SteadyStateValues.Add(new SteadyStateValue(i, values[i]));
+        }
+        
+        public void SubstituteEquation(SteadyStateEquation subEquation)
+        {
+            for (int i = SteadyStateValues.Count - 1; i >= 0; i--)
+            {
+                if (SteadyStateValues[i].Pi == subEquation.Equivalent)
+                {
+                    SubstituteValue(i, subEquation);
+                }
+            }
+        }
+
+        private void SubstituteValue(int oldSteadyStateValueIndex, SteadyStateEquation SubEquation)
+        {
+            decimal multiplier = SteadyStateValues[oldSteadyStateValueIndex].Value;
+
+            foreach (SteadyStateValue newSteadyStateValue in SubEquation.SteadyStateValues)
+                SteadyStateValues.Add(new SteadyStateValue(newSteadyStateValue.Pi, newSteadyStateValue.Value * multiplier));
+
+            SteadyStateValues.RemoveAt(oldSteadyStateValueIndex);
+        }
+
+        public void Consolidate()
+        {
+            List<int> removalIndices = new List<int>();
+
+            for (int i = SteadyStateValues.Count - 1; i >= 0; i--)
+                for (int j = SteadyStateValues.Count - 1; j >= 0; j--)
+                    if (i != j && SteadyStateValues[i].Pi == SteadyStateValues[j].Pi && !removalIndices.Contains(j))
+                    {
+                        decimal p = SteadyStateValues[i].Value;
+                        removalIndices.Add(i);
+                        SteadyStateValues[j].Value += p;
+                    }
+
+            removalIndices.ForEach(i => SteadyStateValues.RemoveAt(i));
+        }
+
+        public void Simplify()
+        {
+            decimal compliment = 1;
+
+            for (int i = SteadyStateValues.Count - 1; i >= 0; i--)
+                if (SteadyStateValues[i].Pi == Equivalent)
+                {
+                    compliment = 1 - SteadyStateValues[i].Value;
+                    SteadyStateValues.RemoveAt(i);
+                }
+
+            for (int i = 0; i < SteadyStateValues.Count; i++)
+                SteadyStateValues[i].Value /= compliment;
         }
     }
 
@@ -95,8 +158,11 @@ namespace SteadyStateConsoleVersion
             Value = value;
         }
     }
-
 }
+
+
+
+
 
 
 /*
@@ -352,4 +418,3 @@ class MarkovChain2
 
 }
 */
-  
