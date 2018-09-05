@@ -60,7 +60,7 @@ namespace SteadyStateConsoleVersion
                         SteadyStateEquations[j].Simplify();
                     }
 
-            return null; //test
+            return null;
         }
 
         public override string ToString()
