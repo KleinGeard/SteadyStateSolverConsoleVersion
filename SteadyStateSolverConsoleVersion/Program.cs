@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
@@ -17,8 +18,18 @@ namespace SteadyStateConsoleVersion
             };
 
             MarkovChain m = new MarkovChain(mchain);
-            m.SteadyStateValues();
             Console.WriteLine(m);
+
+            Stopwatch stopwatch = new Stopwatch();
+            stopwatch.Start();
+
+            var solved = m.SteadyStateValues();
+
+            stopwatch.Stop();
+            Console.WriteLine(stopwatch.ElapsedMilliseconds);
+
+            foreach (var s in solved)
+                Console.WriteLine($"pi_{s.Pi} = {s.Value}");
 
             Console.ReadLine();
         }
@@ -28,6 +39,7 @@ namespace SteadyStateConsoleVersion
     {
         private decimal[,] Matrix;
         private SteadyStateEquation[] SteadyStateEquations;
+        private SteadyStateValue[] SolvedSteadyStateValues;
         private int Len;
 
         public MarkovChain(decimal[,] matrix)
@@ -36,6 +48,8 @@ namespace SteadyStateConsoleVersion
             Len = matrix.GetLength(0);
 
             SteadyStateEquations = new SteadyStateEquation[Len];
+            SolvedSteadyStateValues = new SteadyStateValue[Len];
+
             for (int i = 0; i < Len; i++)
             {
                 decimal[] row = Enumerable.Range(0, Len)
@@ -50,6 +64,7 @@ namespace SteadyStateConsoleVersion
         {
             foreach (SteadyStateEquation steadyStateEquation in SteadyStateEquations)
                 steadyStateEquation.Simplify();
+            //SteadyStateEquations[0].SteadyStateValues[0].Value = 0; //not needed
 
             for (int i = 1; i < SteadyStateEquations.Length; i++)
                 for (int j = 1; j < SteadyStateEquations.Length; j++)
@@ -60,8 +75,35 @@ namespace SteadyStateConsoleVersion
                         SteadyStateEquations[j].Simplify();
                     }
 
-            return null;
+            SubstituteIntoOne();
+
+            return SolvedSteadyStateValues;
         }
+
+        #region solving
+        public void SubstituteIntoOne()
+        {
+            decimal sum = 1;
+
+            for (int i = 1; i < SteadyStateEquations.Length; i++)
+                sum += SteadyStateEquations[i].SteadyStateValues.First().Value;
+
+            SolveAll(1 / sum);
+        }
+
+        public void SolveAll(decimal pi_0Value)
+        {
+            SolvedSteadyStateValues[0] = new SteadyStateValue(0, pi_0Value);
+
+            for (int i = 1; i < Len; i++)
+            {
+                SteadyStateEquation equation = SteadyStateEquations[i];
+                decimal valueInTermsOfPi_0 = equation.SteadyStateValues.First().Value;
+                SteadyStateValue solved = new SteadyStateValue(equation.Equivalent, valueInTermsOfPi_0 * pi_0Value);
+                SolvedSteadyStateValues[equation.Equivalent] = solved;
+            }
+        }
+        #endregion solving
 
         public override string ToString()
         {
@@ -93,7 +135,8 @@ namespace SteadyStateConsoleVersion
             for (int i = 0; i < values.Length; i++)
                 SteadyStateValues.Add(new SteadyStateValue(i, values[i]));
         }
-        
+
+        #region substitution
         public void SubstituteEquation(SteadyStateEquation subEquation)
         {
             for (int i = SteadyStateValues.Count - 1; i >= 0; i--)
@@ -145,6 +188,9 @@ namespace SteadyStateConsoleVersion
             for (int i = 0; i < SteadyStateValues.Count; i++)
                 SteadyStateValues[i].Value /= compliment;
         }
+        #endregion substitution
+
+        
     }
 
     public class SteadyStateValue
