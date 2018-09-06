@@ -8,41 +8,51 @@ namespace SteadyStateConsoleVersion
 {
     class Program
     {
+        const int N = 100;
+        static Random rand = new Random(42);
+
         static void Main(string[] args)
         {
-            decimal[,] mchain =
-            {
-                {0.65m, 0.15m, 0.1m},
-                {0.25m, 0.65m, 0.4m},
-                {0.1m,  0.2m,  0.5m},
-            };
-
-            MarkovChain m = new MarkovChain(mchain);
-            Console.WriteLine(m);
+            var randomMaarkovChain = new MarkovChain(AllocateMatrix(N));
 
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
 
-            var solved = m.SteadyStateValues();
+            var solved = randomMaarkovChain.SteadyStateValues();
 
             stopwatch.Stop();
             Console.WriteLine(stopwatch.ElapsedMilliseconds);
 
-            foreach (var s in solved)
-                Console.WriteLine($"pi_{s.Pi} = {s.Value}");
-
             Console.ReadLine();
+        }
+
+        static double[,] AllocateMatrix(int n, bool initialize = true)
+        {
+            var matrix = new double[n, n];
+            if (initialize)
+            {
+                for (int i = 0; i < n; i++)
+                {
+                    for (int j = 0; j < n; j++)
+                    {
+                        matrix[i, j] = rand.NextDouble();
+                    }
+                }
+            }
+            return matrix;
         }
     }
 
+
+
     public class MarkovChain
     {
-        private decimal[,] Matrix;
+        private double[,] Matrix;
         private SteadyStateEquation[] SteadyStateEquations;
         private SteadyStateValue[] SolvedSteadyStateValues;
         private int Len;
 
-        public MarkovChain(decimal[,] matrix)
+        public MarkovChain(double[,] matrix)
         {
             Matrix = matrix;
             Len = matrix.GetLength(0);
@@ -52,7 +62,7 @@ namespace SteadyStateConsoleVersion
 
             for (int i = 0; i < Len; i++)
             {
-                decimal[] row = Enumerable.Range(0, Len)
+                double[] row = Enumerable.Range(0, Len)
                     .Select(x => matrix[i, x])
                     .ToArray();
 
@@ -83,7 +93,7 @@ namespace SteadyStateConsoleVersion
         #region solving
         public void SubstituteIntoOne()
         {
-            decimal sum = 1;
+            double sum = 1;
 
             for (int i = 1; i < SteadyStateEquations.Length; i++)
                 sum += SteadyStateEquations[i].SteadyStateValues.First().Value;
@@ -91,14 +101,14 @@ namespace SteadyStateConsoleVersion
             SolveAll(1 / sum);
         }
 
-        public void SolveAll(decimal pi_0Value)
+        public void SolveAll(double pi_0Value)
         {
             SolvedSteadyStateValues[0] = new SteadyStateValue(0, pi_0Value);
 
             for (int i = 1; i < Len; i++)
             {
                 SteadyStateEquation equation = SteadyStateEquations[i];
-                decimal valueInTermsOfPi_0 = equation.SteadyStateValues.First().Value;
+                double valueInTermsOfPi_0 = equation.SteadyStateValues.First().Value;
                 SteadyStateValue solved = new SteadyStateValue(equation.Equivalent, valueInTermsOfPi_0 * pi_0Value);
                 SolvedSteadyStateValues[equation.Equivalent] = solved;
             }
@@ -126,7 +136,7 @@ namespace SteadyStateConsoleVersion
         public int Equivalent { get; set; }
         public List<SteadyStateValue> SteadyStateValues { get; set; }
 
-        public SteadyStateEquation(int equivalent, decimal[] values)
+        public SteadyStateEquation(int equivalent, double[] values)
         {
             Equivalent = equivalent;
 
@@ -150,7 +160,7 @@ namespace SteadyStateConsoleVersion
 
         private void SubstituteValue(int oldSteadyStateValueIndex, SteadyStateEquation SubEquation)
         {
-            decimal multiplier = SteadyStateValues[oldSteadyStateValueIndex].Value;
+            double multiplier = SteadyStateValues[oldSteadyStateValueIndex].Value;
 
             foreach (SteadyStateValue newSteadyStateValue in SubEquation.SteadyStateValues)
                 SteadyStateValues.Add(new SteadyStateValue(newSteadyStateValue.Pi, newSteadyStateValue.Value * multiplier));
@@ -166,7 +176,7 @@ namespace SteadyStateConsoleVersion
                 for (int j = SteadyStateValues.Count - 1; j >= 0; j--)
                     if (i != j && SteadyStateValues[i].Pi == SteadyStateValues[j].Pi && !removalIndices.Contains(j))
                     {
-                        decimal p = SteadyStateValues[i].Value;
+                        double p = SteadyStateValues[i].Value;
                         removalIndices.Add(i);
                         SteadyStateValues[j].Value += p;
                     }
@@ -176,7 +186,7 @@ namespace SteadyStateConsoleVersion
 
         public void Simplify()
         {
-            decimal compliment = 1;
+            double compliment = 1;
 
             for (int i = SteadyStateValues.Count - 1; i >= 0; i--)
                 if (SteadyStateValues[i].Pi == Equivalent)
@@ -196,9 +206,9 @@ namespace SteadyStateConsoleVersion
     public class SteadyStateValue
     {
         public int Pi { get; set; } //as an index
-        public decimal Value { get; set; }
+        public double Value { get; set; }
 
-        public SteadyStateValue(int pi, decimal value)
+        public SteadyStateValue(int pi, double value)
         {
             Pi = pi;
             Value = value;
