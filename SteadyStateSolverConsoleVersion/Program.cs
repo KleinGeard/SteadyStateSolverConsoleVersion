@@ -13,15 +13,29 @@ namespace SteadyStateConsoleVersion
 
         static void Main(string[] args)
         {
-            var randomMaarkovChain = new MarkovChain(AllocateMatrix(N));
 
-            Stopwatch stopwatch = new Stopwatch();
-            stopwatch.Start();
+            double[,] mchain =
+            {
+                {0.65, 0.15, 0.1},
+                {0.25, 0.65, 0.4},
+                {0.1,  0.2,  0.5},
+            };
 
-            var solved = randomMaarkovChain.SteadyStateValues();
+            MarkovChain m = new MarkovChain(mchain);
+            var solved = m.SteadyStateValues();
+            Console.WriteLine(m);
 
-            stopwatch.Stop();
-            Console.WriteLine(stopwatch.ElapsedMilliseconds);
+            foreach (var s in solved) Console.WriteLine($"pi_{s.Pi} = {s.Value}");
+
+            //var randomMaarkovChain = new MarkovChain(AllocateMatrix(N));
+
+            //Stopwatch stopwatch = new Stopwatch();
+            //stopwatch.Start();
+
+            //var solved = randomMaarkovChain.SteadyStateValues();
+
+            //stopwatch.Stop();
+            //Console.WriteLine(stopwatch.ElapsedMilliseconds);
 
             Console.ReadLine();
         }
