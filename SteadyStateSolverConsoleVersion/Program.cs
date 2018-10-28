@@ -1,43 +1,83 @@
-﻿using System;
+﻿using SteadyStateSolverConsoleVersion;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading;
 
 namespace SteadyStateConsoleVersion
 {
     class Program
     {
         const int N = 100;
+        const int N_TRIALS = 10;
+        const int MAX_MATRIX_SIZE = 100;
+
         static Random rand = new Random(42);
 
         static void Main(string[] args)
         {
-
             double[,] mchain =
-            {
+                        {
                 {0.65, 0.15, 0.1},
                 {0.25, 0.65, 0.4},
                 {0.1,  0.2,  0.5},
             };
 
             MarkovChain m = new MarkovChain(mchain);
-            var solved = m.SteadyStateValues();
             Console.WriteLine(m);
 
+            var solved = m.SteadyStateValues();
             foreach (var s in solved) Console.WriteLine($"pi_{s.Pi} = {s.Value}");
+            
 
-            //var randomMaarkovChain = new MarkovChain(AllocateMatrix(N));
+            var m2 = new MarkovChain(AllocateMatrix(N));
 
-            //Stopwatch stopwatch = new Stopwatch();
-            //stopwatch.Start();
+            Stopwatch stopwatch = new Stopwatch();
+            stopwatch.Start();
 
-            //var solved = randomMaarkovChain.SteadyStateValues();
+            var solved2 = m2.SteadyStateValues();
 
-            //stopwatch.Stop();
-            //Console.WriteLine(stopwatch.ElapsedMilliseconds);
+            stopwatch.Stop();
+
+            Console.WriteLine(stopwatch.ElapsedMilliseconds);
+
+            Thread.Sleep(1000);
+
+            //RecordExecutionTimes();
 
             Console.ReadLine();
+        }
+
+        public static void RecordExecutionTimes()
+        {
+            StringBuilder results = new StringBuilder();
+            Stopwatch stopwatch = new Stopwatch();
+
+
+            for (int i = 0; i < N_TRIALS; i++)
+            {
+                Console.WriteLine(i);
+                for (int j = 3; j <= MAX_MATRIX_SIZE; j++)
+                {
+                    var m = new MarkovChain(AllocateMatrix(j));
+
+                    stopwatch.Start();
+                    m.SteadyStateValues();
+                    stopwatch.Stop();
+
+                    results.Append($"{stopwatch.ElapsedTicks}, ");
+
+                    stopwatch.Reset();
+
+                }
+
+                results.AppendLine("");
+
+            }
+
+            results.Write("BruteForceMedianExecutionTimeResults.csv");
         }
 
         static double[,] AllocateMatrix(int n, bool initialize = true)
@@ -229,3 +269,4 @@ namespace SteadyStateConsoleVersion
         }
     }
 }
+
